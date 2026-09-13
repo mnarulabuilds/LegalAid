@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CITIZEN
+  LAWYER
+  ADMIN
+}
+
+enum CaseStatus {
+  DRAFT
+  FILED
+  UNDER_REVIEW
+  MEDIATION
+  HEARING
+  RESOLVED
+  CLOSED
+}
+
+enum CaseCategory {
+  FAMILY
+  PROPERTY
+  EMPLOYMENT
+  CONSUMER
+  CRIMINAL
+  CONTRACT
+  CIVIL
+  IMMIGRATION
+  CORPORATE
+  INTELLECTUAL_PROPERTY
+}
+
+enum HearingStatus {
+  SCHEDULED
+  IN_SESSION
+  DELIBERATING
+  ADJOURNED
+  CONCLUDED
+}
+
+enum SpeakerType {
+  CITIZEN
+  COUNSEL
+  OPPOSING
+  JUDGE
+  SYSTEM
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(CITIZEN)
+  countryCode  String   @default("IN")
+  language     String   @default("en")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lawyerProfile   LawyerProfile?
+  filedCases      Case[]           @relation("PlaintiffCases")
+  assignedCases   Case[]           @relation("AssignedLawyer")
+  doubts          Doubt[]
+  hearingMessages HearingMessage[]
+  participations  HearingParty[]
+  reviews         LawyerReview[]   @relation("ReviewAuthor")
+}
+
+model LawyerProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  barNumber        String
+  firmName         String?
+  bio              String
+  specialties      String
+  yearsExperience  Int      @default(1)
+  verified         Boolean  @default(false)
+  wins             Int      @default(0)
+  losses           Int      @default(0)
+  settlements      Int      @default(0)
+  rating           Float    @default(4.5)
+  hourlyRateUsd    Int      @default(150)
+  languagesSpoken  String   @default("en")
+  jurisdictions    String   @default("IN")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  reviews          LawyerReview[]
+}
+
+model LawyerReview {
+  id        String         @id @default(cuid())
+  lawyerId  String
+  lawyer    LawyerProfile  @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User           @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String
+  createdAt DateTime       @default(now())
+}
+
+model Case {
+  id               String       @id @default(cuid())
+  title            String
+  description      String
+  category         CaseCategory
+  jurisdiction     String
+  status           CaseStatus   @default(FILED)
+  reliefSought     String
+  opposingParty    String
+  plaintiffId      String
+  plaintiff        User         @relation("PlaintiffCases", fields: [plaintiffId], references: [id])
+  assignedLawyerId String?
+  assignedLawyer   User?        @relation("AssignedLawyer", fields: [assignedLawyerId], references: [id])
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  hearings         Hearing[]
+  timeline         CaseEvent[]
+}
+
+model CaseEvent {
+  id        String   @id @default(cuid())
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actor     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model Hearing {
+  id        String         @id @default(cuid())
+  caseId    String
+  case      Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  title     String
+  status    HearingStatus  @default(SCHEDULED)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  messages  HearingMessage[]
+  parties   HearingParty[]
+  ruling    String?
+}
+
+model HearingParty {
+  id        String  @id @default(cuid())
+  hearingId String
+  hearing   Hearing @relation(fields: [hearingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  side      String
+
+  @@unique([hearingId, userId])
+}
+
+model HearingMessage {
+  id          String      @id @default(cuid())
+  hearingId   String
+  hearing     Hearing     @relation(fields: [hearingId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id])
+  speakerType SpeakerType
+  speakerName String
+  content     String
+  createdAt   DateTime    @default(now())
+}
+
+model Doubt {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question     String
+  answer       String
+  jurisdiction String
+  category     String
+  createdAt    DateTime @default(now())
+}
+
+enum InstrumentKind {
+  CONSTITUTION
+  AMENDMENT
+  STATUTE
+  REGULATION
+  TREATY
+  CASE_NOTE
+  PRIMER
+}
+
+model LegalInstrument {
+  id           String          @id @default(cuid())
+  kind         InstrumentKind
+  title        String
+  citation     String
+  articleRef   String?
+  summary      String
+  body         String
+  topics       String
+  tags         String
+  jurisdiction String
+  locale       String
+  enactedYear  Int?
+  status       String          @default("IN_FORCE")
+  source       String
+  parentId     String?
+  parent       LegalInstrument?  @relation("Amendments", fields: [parentId], references: [id])
+  children     LegalInstrument[] @relation("Amendments")
+  createdAt    DateTime        @default(now())
+}
