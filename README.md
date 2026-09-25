@@ -36,6 +36,24 @@ npm run db:seed
 npm run dev
 ```
 
+## Deploy to Vercel
+
+Vercel runs the Next.js application natively; it does not run the `Dockerfile` as a persistent application container. Use a managed PostgreSQL provider (Neon, Supabase, Railway, or another PostgreSQL service) and add its connection URL to the Vercel project as `DATABASE_URL`. Include `?sslmode=require` when the provider requires TLS.
+
+The checked-in `vercel.json` runs `prisma migrate deploy` before every build. This applies committed migrations without resetting production data. Set these required Vercel environment variables for **Production**, **Preview**, and **Development** as appropriate:
+
+- `DATABASE_URL` — managed PostgreSQL connection string
+- `AUTH_SECRET` — long random production secret
+- `NEXT_PUBLIC_SITE_URL` — deployed site URL, such as `https://your-project.vercel.app`
+
+Add `OPENAI_API_KEY` and the `STRIPE_*` variables only when those integrations are enabled. After the first deployment, run the seed once against the production database from a trusted machine:
+
+```bash
+DATABASE_URL="your-production-url" npx prisma db seed
+```
+
+Do not set `RUN_DB_PUSH` or `RUN_SEED` in Vercel. Those variables belong to the local Docker entrypoint; production schema changes must go through Prisma migrations.
+
 ## Tests
 
 ```bash
