@@ -2,9 +2,22 @@ import { prisma } from "@/infrastructure/db/prisma";
 import { ForbiddenError, NotFoundError } from "@/domain/errors";
 import { canManageCase, type SessionUser } from "@/domain/policies/authorization";
 import type { AiJudgePort } from "@/infrastructure/ai/ai-port";
+import type { SubscriptionService } from "@/application/subscription-service";
+
+const safeUser = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  countryCode: true,
+  language: true,
+} as const;
 
 export class HearingService {
-  constructor(private readonly judge: AiJudgePort) {}
+  constructor(
+    private readonly judge: AiJudgePort,
+    private readonly subscriptions: SubscriptionService,
+  ) {}
 
   async list(user: SessionUser) {
     return prisma.hearing.findMany({
@@ -23,9 +36,9 @@ export class HearingService {
     const hearing = await prisma.hearing.findUnique({
       where: { id },
       include: {
-        case: { include: { plaintiff: true, assignedLawyer: true } },
+        case: { include: { plaintiff: { select: safeUser }, assignedLawyer: { select: safeUser } } },
         messages: { orderBy: { createdAt: "asc" } },
-        parties: { include: { user: true } },
+        parties: { include: { user: { select: safeUser } } },
       },
     });
     if (!hearing) throw new NotFoundError("Hearing");
@@ -40,6 +53,9 @@ export class HearingService {
     const matter = await prisma.case.findUnique({ where: { id: caseId } });
     if (!matter) throw new NotFoundError("Case");
     if (!canManageCase(user, matter.plaintiffId, matter.assignedLawyerId)) throw new ForbiddenError();
+    if (user.role === "CITIZEN") {
+      await this.subscriptions.assertFeature(user, "OPEN_HEARING");
+    }
     const hearing = await prisma.hearing.create({
       data: {
         caseId,

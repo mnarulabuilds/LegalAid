@@ -4,12 +4,11 @@ import { services } from "@/infrastructure/container";
 import { jsonError } from "@/infrastructure/http/json-error";
 
 const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(2),
-  role: z.enum(["CITIZEN", "LAWYER"]),
-  countryCode: z.string().min(2),
-  language: z.string().min(2),
+  email: z.string().trim().email().max(254),
+  password: z.string().min(8).max(128),
+  name: z.string().trim().min(2).max(100),
+  countryCode: z.string().trim().length(2),
+  language: z.string().trim().min(2).max(10),
 });
 
 export async function POST(req: Request) {

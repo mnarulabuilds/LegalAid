@@ -29,7 +29,6 @@ function RegisterForm() {
         name: formData.get("name"),
         email: formData.get("email"),
         password: formData.get("password"),
-        role: formData.get("role"),
         countryCode: formData.get("countryCode"),
         language: formData.get("language"),
       }),
@@ -65,13 +64,6 @@ function RegisterForm() {
           <input name="password" type="password" minLength={8} required className="mt-1 w-full rounded-md border border-[#14110b]/15 bg-white px-3 py-2" />
         </label>
         <label className="block text-sm">
-          I am
-          <select name="role" className="mt-1 w-full rounded-md border border-[#14110b]/15 bg-white px-3 py-2">
-            <option value="CITIZEN">A person with a legal issue</option>
-            <option value="LAWYER">A lawyer joining the bar</option>
-          </select>
-        </label>
-        <label className="block text-sm">
           Country / jurisdiction
           <select name="countryCode" defaultValue="IN" className="mt-1 w-full rounded-md border border-[#14110b]/15 bg-white px-3 py-2">
             {COUNTRIES.map((c) => (
@@ -91,8 +83,8 @@ function RegisterForm() {
             ))}
           </select>
         </label>
-        {error ? <p className="text-sm text-[#6e2c2c]">{error}</p> : null}
-        <button disabled={pending} className="w-full rounded-full bg-[#14110b] py-3 text-[#f3ead7]">
+        {error ? <p role="alert" className="text-sm text-[#6e2c2c]">{error}</p> : null}
+        <button disabled={pending} aria-busy={pending} className="w-full rounded-full bg-[#14110b] py-3 text-[#f3ead7]">
           {pending ? "Opening…" : "Create account"}
         </button>
       </form>

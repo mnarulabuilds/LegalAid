@@ -28,7 +28,6 @@ export class AuthService {
     email: string;
     password: string;
     name: string;
-    role: "CITIZEN" | "LAWYER";
     countryCode: string;
     language: string;
   }) {
@@ -40,7 +39,7 @@ export class AuthService {
         email: input.email.toLowerCase(),
         passwordHash,
         name: input.name,
-        role: input.role,
+        role: "CITIZEN",
         countryCode: input.countryCode,
         language: input.language,
       },
@@ -80,6 +79,7 @@ export class AuthService {
       include: { lawyerProfile: true },
     });
     if (!user) throw new NotFoundError("User");
-    return user;
+    const { passwordHash: _passwordHash, ...safeUser } = user;
+    return safeUser;
   }
 }

@@ -26,3 +26,9 @@ export class NotFoundError extends DomainError {
     super(`${entity} was not found`, "NOT_FOUND", 404);
   }
 }
+
+export class SubscriptionRequiredError extends DomainError {
+  constructor(message: string, code = "SUBSCRIPTION_REQUIRED") {
+    super(message, code, 402);
+  }
+}

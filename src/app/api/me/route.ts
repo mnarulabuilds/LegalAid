@@ -25,9 +25,9 @@ export async function GET() {
 }
 
 const patchSchema = z.object({
-  countryCode: z.string().min(2).optional(),
-  language: z.string().min(2).optional(),
-  name: z.string().min(2).optional(),
+  countryCode: z.string().trim().length(2).optional(),
+  language: z.string().trim().min(2).max(10).optional(),
+  name: z.string().trim().min(2).max(100).optional(),
 });
 
 export async function PATCH(req: Request) {

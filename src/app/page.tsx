@@ -3,7 +3,7 @@ import { COUNTRIES } from "@/domain/catalog";
 
 export default function HomePage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-16">
+    <main id="main-content" className="mx-auto max-w-6xl px-6 py-16">
       <header className="flex items-center justify-between">
         <p className="display text-3xl text-[#6e2c2c]">LegalAid</p>
         <div className="flex gap-3 text-sm">

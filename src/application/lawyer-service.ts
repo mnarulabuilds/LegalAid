@@ -51,7 +51,25 @@ function mapLawyer(row: {
 export class LawyerService {
   async list() {
     const rows = await prisma.lawyerProfile.findMany({
-      include: { user: true, reviews: true },
+      select: {
+        id: true,
+        userId: true,
+        specialties: true,
+        jurisdictions: true,
+        languagesSpoken: true,
+        wins: true,
+        losses: true,
+        settlements: true,
+        rating: true,
+        yearsExperience: true,
+        verified: true,
+        hourlyRateUsd: true,
+        bio: true,
+        firmName: true,
+        barNumber: true,
+        user: { select: { name: true, countryCode: true } },
+        reviews: { select: { id: true } },
+      },
       orderBy: { rating: "desc" },
     });
     return rows.map((row) => ({
@@ -69,10 +87,35 @@ export class LawyerService {
   async get(id: string) {
     const row = await prisma.lawyerProfile.findUnique({
       where: { id },
-      include: { user: true, reviews: { include: { author: true }, orderBy: { createdAt: "desc" } } },
+      select: {
+        id: true,
+        userId: true,
+        specialties: true,
+        jurisdictions: true,
+        languagesSpoken: true,
+        wins: true,
+        losses: true,
+        settlements: true,
+        rating: true,
+        yearsExperience: true,
+        verified: true,
+        hourlyRateUsd: true,
+        bio: true,
+        firmName: true,
+        barNumber: true,
+        user: { select: { name: true, countryCode: true } },
+        reviews: {
+          select: { id: true, rating: true, comment: true, createdAt: true, author: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+        },
+      },
     });
     if (!row) throw new NotFoundError("Lawyer");
-    return { ...mapLawyer(row), ...row, stats: outcomeStats(row.wins, row.losses, row.settlements) };
+    return {
+      ...mapLawyer(row),
+      stats: outcomeStats(row.wins, row.losses, row.settlements),
+      reviews: row.reviews,
+    };
   }
 
   async upsertOwn(

@@ -40,6 +40,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className={`rounded-md px-3 py-2 ${active ? "bg-[#b08d3e] text-[#14110b]" : "hover:bg-white/5"}`}
               >
                 {copy[link.key]}

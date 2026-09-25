@@ -13,7 +13,20 @@ Layered like a staff-engineer service, not a bag of route handlers:
 
 The AI judge **never** claims to replace a court of record. Rulings are advisory.
 
-## Run locally
+## Run locally (Docker — recommended)
+
+Starts PostgreSQL, migrates, seeds, and serves the app:
+
+```bash
+cp .env.example .env
+npm run local
+```
+
+Open [http://localhost:3000](http://localhost:3000). Stop with `npm run local:down`.
+
+## Run locally (Node)
+
+Requires PostgreSQL (see `DATABASE_URL` in `.env.example`):
 
 ```bash
 npm install
@@ -23,7 +36,23 @@ npm run db:seed
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+## Tests
+
+```bash
+npm test
+npm run test:coverage
+```
+
+Coverage thresholds are enforced at **80%** for domain, application, and core infrastructure helpers.
+
+## Subscriptions (Chambers Pro)
+
+| Plan | Price | Highlights |
+| --- | --- | --- |
+| **Free** | $0 | 1 open matter, 1 AI hearing / month, 3 doubts / month, library search |
+| **Pro** | $29/mo | Unlimited matters & AI rehearsal, library explanations, prep packet exports |
+
+Citizens manage plans in **Settings**. With Stripe keys set (`STRIPE_*` in `.env`), checkout and webhooks activate Pro. Without Stripe, development billing upgrades Pro immediately for local testing.
 
 Demo accounts (password `LegalAid123`):
 
@@ -44,5 +73,6 @@ Optional: set `OPENAI_API_KEY` in `.env` to swap the heuristic bench for GPT. Wi
 | AI courtroom | Argument, microphone input, TTS, advisory ruling |
 | **Laws library** | Constitutions, amendments, statutes, treaties, case notes — search ranked by country + locale |
 | Doubts | Questions answered with citations from the library |
+| Billing | Stripe subscriptions (Pro tier) with usage limits on Free |
 
 Educational abridgements in the corpus are **not** official gazettes. Always confirm in-force text before filing.

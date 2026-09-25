@@ -3,8 +3,25 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  NONE
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+enum UsageEventKind {
+  LIBRARY_EXPLAIN
 }
 
 enum Role {
@@ -60,6 +77,11 @@ model User {
   role         Role     @default(CITIZEN)
   countryCode  String   @default("IN")
   language     String   @default("en")
+  subscriptionPlan         SubscriptionPlan   @default(FREE)
+  subscriptionStatus       SubscriptionStatus @default(NONE)
+  subscriptionPeriodEnd    DateTime?
+  stripeCustomerId         String?            @unique
+  stripeSubscriptionId     String?            @unique
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -70,6 +92,17 @@ model User {
   hearingMessages HearingMessage[]
   participations  HearingParty[]
   reviews         LawyerReview[]   @relation("ReviewAuthor")
+  usageEvents     UsageEvent[]
+}
+
+model UsageEvent {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      UsageEventKind
+  createdAt DateTime       @default(now())
+
+  @@index([userId, kind, createdAt])
 }
 
 model LawyerProfile {

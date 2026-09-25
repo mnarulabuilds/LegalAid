@@ -16,6 +16,17 @@ export function canManageCase(user: SessionUser, plaintiffId: string, assignedLa
   return false;
 }
 
+/** Read access: parties, assigned counsel, admins, or lawyers browsing unassigned matters. */
+export function canViewCase(
+  user: SessionUser,
+  matter: { plaintiffId: string; assignedLawyerId?: string | null },
+) {
+  if (user.role === "ADMIN") return true;
+  if (canManageCase(user, matter.plaintiffId, matter.assignedLawyerId)) return true;
+  if (user.role === "LAWYER" && !matter.assignedLawyerId) return true;
+  return false;
+}
+
 export function canActAsCounsel(user: SessionUser) {
   return user.role === "LAWYER" || user.role === "ADMIN";
 }

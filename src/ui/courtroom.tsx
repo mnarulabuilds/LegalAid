@@ -32,15 +32,23 @@ export function Courtroom({
   const router = useRouter();
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function speak() {
     if (draft.trim().length < 8) return;
     setPending(true);
-    await fetch(`/api/hearings/${hearingId}/speak`, {
+    setError(null);
+    const res = await fetch(`/api/hearings/${hearingId}/speak`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: draft }),
     });
+    if (!res.ok) {
+      const data = (await res.json()) as { error?: string };
+      setError(data.error ?? "Could not submit argument.");
+      setPending(false);
+      return;
+    }
     setDraft("");
     setPending(false);
     router.refresh();
@@ -85,17 +93,33 @@ export function Courtroom({
       </p>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h1 className="display text-4xl">{title}</h1>
-        <button
-          type="button"
-          disabled={pending || status === "CONCLUDED"}
-          onClick={conclude}
-          className="rounded-full border border-[#14110b]/20 px-4 py-2 text-sm"
-        >
-          Ask for advisory ruling
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={pending || status === "CONCLUDED"}
+            onClick={conclude}
+            aria-label="Request advisory ruling from the AI bench"
+            className="rounded-full border border-[#14110b]/20 px-4 py-2 text-sm"
+          >
+            Ask for advisory ruling
+          </button>
+          <a
+            href={`/api/hearings/${hearingId}/prep-packet`}
+            className="rounded-full border border-[#14110b]/20 px-4 py-2 text-sm"
+            aria-label="Download prep packet text file"
+          >
+            Export prep packet
+          </a>
+        </div>
       </div>
 
-      <ol className="space-y-3">
+      {error ? (
+        <p className="text-sm text-[#6e2c2c]" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <ol className="space-y-3" aria-label="Hearing transcript">
         {messages.map((m) => (
           <li
             key={m.id}
@@ -121,13 +145,21 @@ export function Courtroom({
 
       {status !== "CONCLUDED" ? (
         <div className="panel rounded-2xl p-4 space-y-3">
+          <label htmlFor="hearing-argument" className="sr-only">
+            Argument to the bench
+          </label>
           <textarea
+            id="hearing-argument"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Address the bench. State facts, the rule, and the order you seek."
             rows={4}
+            aria-describedby="hearing-argument-hint"
             className="w-full rounded-md border border-[#14110b]/15 px-3 py-2"
           />
+          <p id="hearing-argument-hint" className="text-xs text-[#3d4a45]">
+            Minimum eight characters. This session is advisory and not a court of record.
+          </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

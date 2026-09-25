@@ -3,9 +3,13 @@ import { NotFoundError } from "@/domain/errors";
 import type { SessionUser } from "@/domain/policies/authorization";
 import type { AiJudgePort } from "@/infrastructure/ai/ai-port";
 import { rankLegalInstruments, type SearchableInstrument } from "@/domain/search/legal-index";
+import type { SubscriptionService } from "@/application/subscription-service";
 
 export class KnowledgeService {
-  constructor(private readonly judge: AiJudgePort) {}
+  constructor(
+    private readonly judge: AiJudgePort,
+    private readonly subscriptions: SubscriptionService,
+  ) {}
 
   async search(input: {
     query: string;
@@ -47,8 +51,9 @@ export class KnowledgeService {
   }
 
   async explain(user: SessionUser, id: string, question: string) {
+    await this.subscriptions.assertFeature(user, "EXPLAIN_INSTRUMENT");
     const item = await this.get(id);
-    return this.judge.explainLaw({
+    const explanation = await this.judge.explainLaw({
       title: item.title,
       citation: item.citation,
       body: `${item.summary}\n\n${item.body}`,
@@ -56,9 +61,14 @@ export class KnowledgeService {
       jurisdiction: item.jurisdiction,
       language: user.language,
     });
+    if (user.role === "CITIZEN") {
+      await this.subscriptions.recordUsage(user.id, "LIBRARY_EXPLAIN");
+    }
+    return explanation;
   }
 
   async ask(user: SessionUser, question: string, category: string) {
+    await this.subscriptions.assertFeature(user, "ASK_DOUBT");
     const related = await this.search({
       query: question,
       jurisdiction: user.countryCode,

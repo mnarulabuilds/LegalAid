@@ -1,13 +1,24 @@
 import { prisma } from "@/infrastructure/db/prisma";
 import { ForbiddenError, NotFoundError } from "@/domain/errors";
-import { canManageCase, nextCaseStatus, type SessionUser } from "@/domain/policies/authorization";
+import { canManageCase, canViewCase, nextCaseStatus, type SessionUser } from "@/domain/policies/authorization";
 import type { CaseCategory } from "@/domain/catalog";
+import type { SubscriptionService } from "@/application/subscription-service";
+
+const safeUser = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  countryCode: true,
+  language: true,
+} as const;
 
 export class CaseService {
+  constructor(private readonly subscriptions: SubscriptionService) {}
   async list(user: SessionUser) {
     if (user.role === "ADMIN") {
       return prisma.case.findMany({
-        include: { plaintiff: true, assignedLawyer: true, hearings: true },
+        include: { plaintiff: { select: safeUser }, assignedLawyer: { select: safeUser }, hearings: true },
         orderBy: { updatedAt: "desc" },
       });
     }
@@ -16,13 +27,13 @@ export class CaseService {
         where: {
           OR: [{ plaintiffId: user.id }, { assignedLawyerId: user.id }, { assignedLawyerId: null }],
         },
-        include: { plaintiff: true, assignedLawyer: true, hearings: true },
+        include: { plaintiff: { select: safeUser }, assignedLawyer: { select: safeUser }, hearings: true },
         orderBy: { updatedAt: "desc" },
       });
     }
     return prisma.case.findMany({
       where: { plaintiffId: user.id },
-      include: { plaintiff: true, assignedLawyer: true, hearings: true },
+      include: { plaintiff: { select: safeUser }, assignedLawyer: { select: safeUser }, hearings: true },
       orderBy: { updatedAt: "desc" },
     });
   }
@@ -31,14 +42,14 @@ export class CaseService {
     const matter = await prisma.case.findUnique({
       where: { id },
       include: {
-        plaintiff: true,
-        assignedLawyer: { include: { lawyerProfile: true } },
-        hearings: { include: { messages: true } },
+        plaintiff: { select: safeUser },
+        assignedLawyer: { select: { ...safeUser, lawyerProfile: true } },
+        hearings: { include: { messages: { include: { user: { select: safeUser } } } } },
         timeline: { orderBy: { createdAt: "desc" } },
       },
     });
     if (!matter) throw new NotFoundError("Case");
-    if (!canManageCase(user, matter.plaintiffId, matter.assignedLawyerId) && user.role !== "LAWYER") {
+    if (!canViewCase(user, matter)) {
       throw new ForbiddenError();
     }
     return matter;
@@ -54,6 +65,9 @@ export class CaseService {
       reliefSought: string;
     },
   ) {
+    if (user.role === "CITIZEN") {
+      await this.subscriptions.assertFeature(user, "CREATE_CASE");
+    }
     return prisma.case.create({
       data: {
         title: input.title,
